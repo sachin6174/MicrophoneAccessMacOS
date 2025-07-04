@@ -181,6 +181,28 @@ struct ContentView: View {
                             .buttonStyle(PlainButtonStyle())
                         }
                     }
+                    
+                    // Locate Application button - always visible regardless of permission status
+                    Button(action: locateApplication) {
+                        Text("Locate Application")
+                            .font(.subheadline)
+                            .foregroundColor(.blue)
+                            .frame(maxWidth: .infinity, minHeight: 32)
+                            .background(Color.blue.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+                    
+                    // Refresh Status button - always visible
+                    Button(action: recheckPermission) {
+                        Text("Refresh Status")
+                            .font(.subheadline)
+                            .foregroundColor(.gray)
+                            .frame(maxWidth: .infinity, minHeight: 32)
+                            .background(Color.gray.opacity(0.1))
+                            .cornerRadius(6)
+                    }
+                    .buttonStyle(PlainButtonStyle())
                 }
             }
             
@@ -280,12 +302,39 @@ struct ContentView: View {
     }
     
     private func openSystemSettings() {
-        // Try the modern macOS 13+ URL first, then fallback to legacy URL
-        if let url = URL(string: "x-apple.systempreferences:com.apple.Settings.PrivacySecurity.extension") {
-            NSWorkspace.shared.open(url)
-        } else if let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone") {
-            NSWorkspace.shared.open(url)
+        // Try multiple URL schemes to open microphone permission settings
+        let urls = [
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone",
+            "x-apple.systempreferences:com.apple.preferences.security.privacy?Privacy_Microphone",
+            "x-apple.systempreferences:com.apple.Settings.PrivacySecurity.extension?Privacy_Microphone",
+            "x-apple.systempreferences:com.apple.preference.security"
+        ]
+        
+        for urlString in urls {
+            if let url = URL(string: urlString) {
+                NSWorkspace.shared.open(url)
+                print("🔧 Opening System Settings with URL: \(urlString)")
+                return
+            }
         }
+        
+        // Fallback: open general System Preferences
+        NSWorkspace.shared.open(URL(fileURLWithPath: "/System/Applications/System Preferences.app"))
+        print("⚠️ Opened System Preferences as fallback")
+    }
+    
+    private func locateApplication() {
+        // Get the path to the current application bundle
+        let appPath = Bundle.main.bundlePath
+        
+        // Open Finder and select the application
+        NSWorkspace.shared.selectFile(appPath, inFileViewerRootedAtPath: "")
+        print("📱 Locating application at: \(appPath)")
+    }
+    
+    private func recheckPermission() {
+        print("🔄 Manually rechecking microphone permission...")
+        microphoneManager.refreshPermissionStatus()
     }
 }
 
